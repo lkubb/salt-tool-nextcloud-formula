@@ -30,11 +30,11 @@ def __virtual__():
 
 def _where(user=None):
     if salt.utils.platform.is_darwin():
-        return salt['user.info'](user).home + '/Library/Preferences/Nextcloud/nextcloud.cfg'
+        return __salt__['user.info'](user).home + '/Library/Preferences/Nextcloud/nextcloud.cfg'
     elif salt.utils.platform.is_linux():
-        return salt['cmd.run']("echo ${XDG_CONFIG_HOME:-$HOME/.config}/Nextcloud/nextcloud.cfg")
+        return __salt__['cmd.run']("echo ${XDG_CONFIG_HOME:-$HOME/.config}/Nextcloud/nextcloud.cfg")
     elif salt.utils.platform.is_windows():
-        return salt['user.info'](user).home + '\\AppData\\Roaming\\Nextcloud\\nextcloud.cfg'
+        return __salt__['user.info'](user).home + '\\AppData\\Roaming\\Nextcloud\\nextcloud.cfg'
 
     raise CommandExecutionError("Platform not supported.")
 
@@ -557,7 +557,7 @@ def _deauthenticate_request(name, url, app_password, user=None):
 
 def _macos_has_authentication(name, url, keychain=None, user=None):
     if keychain is None:
-        keychain = salt['user.info'](user).home + '/Library/Keychains/login.keychain-db'
+        keychain = __salt__['user.info'](user).home + '/Library/Keychains/login.keychain-db'
 
     _, num = _get_account(name, url, user)
     for s in [name, name + '_app-password']:
@@ -574,7 +574,7 @@ def _macos_save_authentication(name, app_password, url, keychain=None, user=None
         raise CommandExecutionError("An item for account {} on server {} already exists in keychain {} for user {}.".format(name, url, keychain, user))
 
     if keychain is None:
-        keychain = salt['user.info'](user).home + '/Library/Keychains/login.keychain-db'
+        keychain = __salt__['user.info'](user).home + '/Library/Keychains/login.keychain-db'
 
     _, num = _get_account(name, url, user)
     for s in [name, name + '_app-password']:
@@ -592,7 +592,7 @@ def _macos_delete_authentication(name, url, keychain=None, user=None):
 
     _, num = _get_account(name, url, user)
     if keychain is None:
-        keychain = salt['user.info'](user).home + '/Library/Keychains/login.keychain-db'
+        keychain = __salt__['user.info'](user).home + '/Library/Keychains/login.keychain-db'
 
     for s in [name, name + '_app-password']:
         ret = __salt__['cmd.run'](
@@ -608,7 +608,7 @@ def _macos_get_authentication(name, url, keychain=None, user=None):
         raise CommandExecutionError("An item for account {} on server {} does not exist in keychain {} for user {}.".format(name, url, keychain, user))
     _, num = _get_account(name, url, user)
     if keychain is None:
-        keychain = salt['user.info'](user).home + '/Library/Keychains/login.keychain-db'
+        keychain = __salt__['user.info'](user).home + '/Library/Keychains/login.keychain-db'
 
     cmd = "/usr/bin/security find-generic-password -a '{}:{}/:{}' -s 'Nextcloud' -w '{}'".format(
               name, url, num, keychain)
