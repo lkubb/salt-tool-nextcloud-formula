@@ -1,3 +1,12 @@
+"""
+Nextcloud Desktop Salt Execution Module
+Manage Nextcloud Desktop user accounts, their authentication
+and general options in nextcloud.cfg.
+
+======================================================
+
+"""
+
 from salt.exceptions import CommandExecutionError
 # import logging
 import configparser
@@ -84,7 +93,7 @@ def add_account(name, url, authtype='webflow', user=None):
 
     """
     if account_exists(name, url, user):
-        raise CommandExecutionError("Account with name {} already exists in nextcloud.cfg.")
+        raise CommandExecutionError("Account {} on {} already exists in nextcloud.cfg for user {}.".format(name, url, user))
 
     account = _serialize_account(name, url, authtype, user)
     c = _update_cfg("Accounts", account, user)
@@ -116,7 +125,7 @@ def remove_account(name, url=None, user=None):
 
     """
     if not account_exists(name, url, user):
-        raise CommandExecutionError("Account with name {} does not exist in nextcloud.cfg.")
+        raise CommandExecutionError("Account {} on {} does not exist in nextcloud.cfg for user {}.".format(name, url, user))
 
     _, i = _get_account(name, url, user)
 
@@ -125,7 +134,7 @@ def remove_account(name, url=None, user=None):
         if '{}\\'.format(i) == opt[:2]:
             c.remove_option("Accounts", opt)
     if not _save_cfg(c, user):
-        raise CommandExecutionError("Could not save nextcloud.cfg while removing account {}.".format(name))
+        raise CommandExecutionError("Could not save nextcloud.cfg while removing account {} on {} for user {}.".format(name, url, user))
 
     return True
 
@@ -202,7 +211,7 @@ def deauthenticate(name, url=None, app_password=None, prompt=False, keyring=None
         Account password associated specifically with the local login session.
         It can be found in the keyring. Needed when prompt=False.
 
-    prompt:
+    prompt
         Allow lookup of app_password in keyring by salt. On MacOS, the user will
         be prompted for permission (ie the process is interactive). Currently
         supported on MacOS only. Defaults to False.
@@ -219,7 +228,7 @@ def deauthenticate(name, url=None, app_password=None, prompt=False, keyring=None
 
     # online logout needs app password. can be read from keyring if user prompts are OK
     if not app_password or prompt:
-        raise CommandExecutionError("Deauthentication needs application password or permission to prompt. Missing for account {} on {}".format(name, url))
+        raise CommandExecutionError("Deauthentication needs application password or permission to prompt. Missing for account {} on {} for user {}".format(name, url, user))
 
     if url is None:
         url = _get_account(name, user=user)["url"]
@@ -367,7 +376,7 @@ def get_app_password(name, url, keyring=None, user=None):
     """
     if salt.util.platform.is_darwin():
         if not (app_password := _macos_get_authentication(name, url, keyring, user)):
-            raise CommandExecutionError("Could not retrieve application password for {} on {}".format(name, url))
+            raise CommandExecutionError("Could not retrieve application password for {} on {} for user {}.".format(name, url, user))
 
     if app_password:
         return app_password
@@ -561,8 +570,8 @@ def _macos_has_authentication(name, url, keychain=None, user=None):
 
 
 def _macos_save_authentication(name, app_password, url, keychain=None, user=None):
-    if _macos_has_authentication(name, url, user):
-        raise CommandExecutionError("An item for user {} on server {} already exists in keychain {}.".format(name, url, keychain))
+    if _macos_has_authentication(name, url, keychain, user):
+        raise CommandExecutionError("An item for account {} on server {} already exists in keychain {} for user {}.".format(name, url, keychain, user))
 
     if keychain is None:
         keychain = salt['user.info'](user).home + '/Library/Keychains/login.keychain-db'
@@ -573,13 +582,13 @@ def _macos_save_authentication(name, app_password, url, keychain=None, user=None
             "/usr/bin/security add-generic-password -a '{}:{}/:{}' -s 'Nextcloud' -T '/Applications/Nextcloud.app' -w '{}' '{}'".format(
                 s, url, num, app_password, keychain), runas=user)
         if ret:
-            raise CommandExecutionError("Could not save the application password for {} to Keychain.".format(name))
+            raise CommandExecutionError("Could not save the application password for {} on {} to keychain {} for user {}.".format(name, url, keychain, user))
     return app_password
 
 
 def _macos_delete_authentication(name, url, keychain=None, user=None):
-    if not _macos_has_authentication(name, url, user):
-        raise CommandExecutionError("An item for user {} on server {} does not exist in keychain {}.".format(name, url, keychain))
+    if not _macos_has_authentication(name, url, keychain, user):
+        raise CommandExecutionError("An item for account {} on server {} does not exist in keychain {} for user {}.".format(name, url, keychain, user))
 
     _, num = _get_account(name, url, user)
     if keychain is None:
@@ -590,11 +599,13 @@ def _macos_delete_authentication(name, url, keychain=None, user=None):
             "/usr/bin/security delete-generic-password -a '{}:{}/:{}' -s 'Nextcloud' '{}'".format(
                 s, url, num, keychain), runas=user)
         if 'password has been deleted.' not in ret:
-            raise CommandExecutionError("Could not remove the application password for {} from keychain {}.".format(name, keychain))
+            raise CommandExecutionError("Could not remove the application password for {} on {} from keychain {} for user {}.".format(name, url, keychain, user))
     return True
 
 
 def _macos_get_authentication(name, url, keychain=None, user=None):
+    if not _macos_has_authentication(name, url, keychain, user):
+        raise CommandExecutionError("An item for account {} on server {} does not exist in keychain {} for user {}.".format(name, url, keychain, user))
     _, num = _get_account(name, url, user)
     if keychain is None:
         keychain = salt['user.info'](user).home + '/Library/Keychains/login.keychain-db'
@@ -606,7 +617,7 @@ def _macos_get_authentication(name, url, keychain=None, user=None):
 
     if ret:
         return ret
-    raise CommandExecutionError("Could not get authentication data for {} at {} in keychain {}.".format(name, url, keychain))
+    raise CommandExecutionError("Could not get authentication data for {} on {} in keychain {} for user {}.".format(name, url, keychain, user))
 
 
 def _list_accounts(user=None):
@@ -619,7 +630,7 @@ def _get_account(name, url=None, user=None):
         if name == x.dav_user:
             if url is None or url == x.url:
                 return x, i
-    raise CommandExecutionError("Could not find account name in nextcloud.cfg.")
+    raise CommandExecutionError("Could not find account named {} on {} in nextcloud.cfg for user.".format(name, url, user))
 
 
 def _get_accounts(user=None):
@@ -650,11 +661,11 @@ def _serialize_account(name, url, authtype='webflow', user=None):
     elif 'http' == authtype:
         account.update({'http_user': name})
     else:
-        raise CommandExecutionError("Unsupported authentication type {} for account {}.".format(authtype, name))
+        raise CommandExecutionError("Unsupported authentication type {} for account {} on {} for user {}.".format(authtype, name, url, user))
 
     num = max(_get_accounts(user).keys() or [-1]) + 1
 
-    # prepend <num>\\ to keys and return
+    # prepend <num>\ to keys and return
     return dict(zip(
         [str(num) + '\\' + x for x in account.keys()],
         account.values()))
@@ -663,7 +674,9 @@ def _serialize_account(name, url, authtype='webflow', user=None):
 def _get_parsed_cfg(user=None):
     cfg = _where(user)
     c = configparser.ConfigParser()
-    c.optionxform = str  # case-sensitive read/write
+    # case-sensitive read/write. configparser defaults to insensitive
+    # can be set to any function and parses on read/write
+    c.optionxform = str
     if __salt__['file.exists'](cfg):
         c.read(cfg)
     return c

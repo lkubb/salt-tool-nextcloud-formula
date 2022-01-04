@@ -1,5 +1,8 @@
 """
-nextcloud salt states
+Nextcloud Desktop Salt State
+Manage Nextcloud Desktop user accounts, their authentication
+and general options in nextcloud.cfg.
+
 ======================================================
 
 """
