@@ -8,14 +8,14 @@ and general options in nextcloud.cfg.
 """
 
 from salt.exceptions import CommandExecutionError
-# import logging
+import logging
 import configparser
 from xml.etree import ElementTree
 
 import salt.utils.platform
 import salt.utils.http
 
-# log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 __virtualname__ = "nextcloud"
 
 
@@ -29,6 +29,10 @@ def __virtual__():
 
 
 def _where(user=None):
+    if user is None:
+        user = __salt__['environ.get']('USER')
+        log.warn("Nextcloud was called without local user account specified. Defaulting to current salt user {}.".format(user))
+
     if salt.utils.platform.is_darwin():
         return __salt__['user.info'](user)['home'] + '/Library/Preferences/Nextcloud/nextcloud.cfg'
     elif salt.utils.platform.is_linux():
@@ -96,7 +100,7 @@ def add_account(name, url, authtype='webflow', user=None):
         raise CommandExecutionError("Account {} on {} already exists in nextcloud.cfg for user {}.".format(name, url, user))
 
     account = _serialize_account(name, url, authtype, user)
-    c = _update_cfg("Accounts", account, user)
+    c = _update_cfg("Accounts", account, user=user)
     return _save_cfg(c, user)
 
 
@@ -267,15 +271,8 @@ def update_options(options, user=None):
 
     c = _get_parsed_cfg(user)
 
-    # based on https://github.com/saltstack/salt/blob/master/salt/serializers/configparser.py#L77
     for section, opts in options.items():
-        section = str(section)
-        if not section == configparser.DEFAULTSECT and \
-           not c.has_section(section):
-            c.add_section(section)
-        for opt, val in opts.items():
-            opt = str(opt)
-            c[section][opt] = val
+        c = _update_cfg(section, opts, c, user)
 
     return _save_cfg(c, user)
 
@@ -374,7 +371,7 @@ def get_app_password(name, url, keyring=None, user=None):
         The local user to deauthenticate the account for. Defaults to salt user.
 
     """
-    if salt.util.platform.is_darwin():
+    if salt.utils.platform.is_darwin():
         if not (app_password := _macos_get_authentication(name, url, keyring, user)):
             raise CommandExecutionError("Could not retrieve application password for {} on {} for user {}.".format(name, url, user))
 
@@ -413,7 +410,7 @@ def has_app_password(name, url, keyring=None, user=None):
         The local user to deauthenticate the account for. Defaults to salt user.
 
     """
-    if salt.util.platform.is_darwin():
+    if salt.utils.platform.is_darwin():
         if _macos_has_authentication(name, url, keyring, user):
             return True
     else:
@@ -450,7 +447,7 @@ def remove_app_password(name, url, keyring=None, user=None):
         The local user to deauthenticate the account for. Defaults to salt user.
 
     """
-    if salt.util.platform.is_darwin():
+    if salt.utils.platform.is_darwin():
         if _macos_delete_authentication(name, url, keyring, user):
             return True
     else:
@@ -491,7 +488,7 @@ def save_app_password(name, url, app_password, keyring=None, user=None):
         The local user to deauthenticate the account for. Defaults to salt user.
 
     """
-    if salt.util.platform.is_darwin():
+    if salt.utils.platform.is_darwin():
         if _macos_save_authentication(name, app_password, url, keyring, user):
             return True
     else:
@@ -515,15 +512,18 @@ def _authenticate_request(name, url, password, user=None):
         '{}/ocs/v2.php/core/getapppassword'.format(url),
         header_dict=headers,
         username=name,
-        password=password
+        password=password,
+        decode=True,
+        decode_type="xml",
+        status=True
     )
 
-    data = ElementTree.fromstring(response.content)
+    # data = ElementTree.fromstring(response.content)
 
-    if '200' != (statuscode := data.findall('.//statuscode')[0].text):
-        raise CommandExecutionError("Nextcloud authentication failed with HTTP status code {}.".format(statuscode))
+    if 200 != response['status']:
+        raise CommandExecutionError("Nextcloud authentication failed with HTTP status code {}.".format(response["status"]))
 
-    return data.findall('.//apppassword')[0].text
+    return response['dict'][1]['apppassword']
 
 
 def _deauthenticate_request(name, url, app_password, user=None):
@@ -561,9 +561,9 @@ def _macos_has_authentication(name, url, keychain=None, user=None):
 
     _, num = _get_account(name, url, user)
     for s in [name, name + '_app-password']:
-        ret = __salt__['cmd.run'](
+        ret = __salt__['cmd.retcode'](
             "/usr/bin/security find-generic-password -a '{}:{}/:{}' -s 'Nextcloud' '{}'".format(
-                s, url, num, keychain), runas=user)
+                s, url, num, keychain))
         if ret:
             return False
     return True
@@ -578,9 +578,12 @@ def _macos_save_authentication(name, app_password, url, keychain=None, user=None
 
     _, num = _get_account(name, url, user)
     for s in [name, name + '_app-password']:
-        ret = __salt__['cmd.retcode'](
+        # do not run as different user since switching context during salt run
+        # results in denied requests: SecKeychainItemCreateFromContent
+        # "user interaction is not allowed"
+        ret = __salt__['cmd.run'](
             "/usr/bin/security add-generic-password -a '{}:{}/:{}' -s 'Nextcloud' -T '/Applications/Nextcloud.app' -w '{}' '{}'".format(
-                s, url, num, app_password, keychain), runas=user)
+                s, url, num, app_password, keychain))
         if ret:
             raise CommandExecutionError("Could not save the application password for {} on {} to keychain {} for user {}.".format(name, url, keychain, user))
     return app_password
@@ -597,7 +600,7 @@ def _macos_delete_authentication(name, url, keychain=None, user=None):
     for s in [name, name + '_app-password']:
         ret = __salt__['cmd.run'](
             "/usr/bin/security delete-generic-password -a '{}:{}/:{}' -s 'Nextcloud' '{}'".format(
-                s, url, num, keychain), runas=user)
+                s, url, num, keychain))
         if 'password has been deleted.' not in ret:
             raise CommandExecutionError("Could not remove the application password for {} on {} from keychain {} for user {}.".format(name, url, keychain, user))
     return True
@@ -613,7 +616,7 @@ def _macos_get_authentication(name, url, keychain=None, user=None):
     cmd = "/usr/bin/security find-generic-password -a '{}:{}/:{}' -s 'Nextcloud' -w '{}'".format(
               name, url, num, keychain)
 
-    ret = __salt__['cmd.run'](cmd, runas=user)
+    ret = __salt__['cmd.run'](cmd)
 
     if ret:
         return ret
@@ -627,10 +630,10 @@ def _list_accounts(user=None):
 
 def _get_account(name, url=None, user=None):
     for i, x in _get_accounts(user).items():
-        if name == x.dav_user:
-            if url is None or url == x.url:
+        if name == x['dav_user']:
+            if url is None or url == x['url']:
                 return x, i
-    raise CommandExecutionError("Could not find account named {} on {} in nextcloud.cfg for user.".format(name, url, user))
+    raise CommandExecutionError("Could not find account named {} on {} in nextcloud.cfg for user {}.".format(name, url, user))
 
 
 def _get_accounts(user=None):
@@ -650,10 +653,13 @@ def _get_accounts(user=None):
 
 
 def _serialize_account(name, url, authtype='webflow', user=None):
+    # user=@Invalid() seems to be important, without it, no account name
+    # is shown and nextcloud does not recognize the credentials in the keychain
     account = {
         'authtype': authtype,
         'dav_user': name,
         'url': url,
+        'user': '@Invalid()'
     }
 
     if 'webflow' == authtype:
@@ -677,15 +683,25 @@ def _get_parsed_cfg(user=None):
     # case-sensitive read/write. configparser defaults to insensitive
     # can be set to any function and parses on read/write
     c.optionxform = str
-    if __salt__['file.exists'](cfg):
+    if __salt__['file.file_exists'](cfg):
         c.read(cfg)
     return c
 
 
-def _update_cfg(section, options, user=None):
-    c = _get_parsed_cfg(user)
-    for var, val in options:
-        c[section][var] = val
+def _update_cfg(section, options, c=None, user=None):
+    if c is None:
+        c = _get_parsed_cfg(user)
+
+    section = str(section)
+
+    if not section == configparser.DEFAULTSECT and \
+       not c.has_section(section):
+        c.add_section(section)
+
+    for opt, val in options.items():
+        opt, val = str(opt), str(val)
+        c[section][opt] = val
+
     return c
 
 

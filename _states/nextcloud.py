@@ -134,17 +134,28 @@ def account_authenticated(name, url=None, password=None, password_pillar=None, k
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     try:
+        has_app_password = __salt__["nextcloud.has_app_password"](name, url, keyring, user)
         # for authentication, require the account be present in the config file
         if not __salt__["nextcloud.account_exists"](name, url, user):
             ret["result"] = False
             ret["comment"] = "Account {} on {} is not present in nextcloud.cfg for user {}. Make sure to call nextcloud.account_present first.".format(name, url, user)
+            if has_app_password:
+                ret["comment"] += " It seems there is a keyring entry though. Delete it to avoid bugs."
+            if __opts__["test"]:
+                ret["result"] = None
+                ret["comment"] += " Since this is a test run, this might be expected."
+        if has_app_password:
+            ret["comment"] = "Account {} on {} seems to be authenticated for user {}. If not, delete the keyring entry and try again.".format(name, url, user)
+            return ret
+            # @TODO supply force flag to renew auth
+
         # checking authentication does not work without external consequences, assume it works
         elif __opts__["test"]:
             ret["result"] = None
             ret["comment"] = "Account '{}' on '{}' would have been authenticated for user '{}'.".format(name, url, user)
             ret["changes"] = {'authenticated': name}
         # try to acquire an application password
-        elif (app_password := __salt__["nextcloud.authenticate"](name, url, password, password_pillar, keyring, user)):
+        elif (app_password := __salt__["nextcloud.authenticate"](name, url, password, password_pillar, user)):
             ret["comment"] = "Account '{}' on '{}' was authenticated for user '{}'.".format(name, url, user)
             ret["changes"] = {'authenticated': name}
         else:
@@ -217,7 +228,7 @@ def account_deauthenticated(name, url=None, app_password=None, keyring=None, pro
             ret["comment"] = "Account {} is not present in nextcloud.cfg for user {}. Make sure to call nextcloud.account_present first or specify url.".format(name, user)
             return ret
 
-        has_app_password = __salt["nextcloud.has_app_password"](name, url, keyring, user)
+        has_app_password = __salt__["nextcloud.has_app_password"](name, url, keyring, user)
 
         if prompt and app_password is None:
             if not has_app_password:
@@ -303,7 +314,7 @@ def options(options, sync=False, sync_accounts=False, user=None, name=None):
                 ret["comment"] += " Accounts have been synced as well."
             ret["changes"] = changes
 
-        elif sync and __salt__["nextcloud.update_options"](options, user):
+        elif __salt__["nextcloud.update_options"](options, user):
             ret["comment"] = "Options have been updated for user '{}'.".format(user)
             ret["changes"] = changes
         else:
