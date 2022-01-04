@@ -4,6 +4,9 @@ Sets up and configures Nextcloud Desktop client, including user accounts and aut
 ## Usage
 Applying `tool-nextcloud` will make sure Nextcloud Desktop client is configured as specified.
 
+### Authentication Setup
+You can configure this formula to automatically login user accounts as well. This currently works on MacOS only. Accounts that are configured this way will prompt the user for Keychain Access authentication when Nextcloud starts. Click `Allow always` to silence that prompt.
+
 ### Execution module and state
 This formula provides a relatively large custom execution module and state to manage user accounts, their authentication and general Nextcloud options in `nextcloud.cfg`. The functions are documented, please see the source code for comments. Currently, the following states are supported:
 * `nextcloud.account_present(name, url, authtype='webflow', user=None)`
