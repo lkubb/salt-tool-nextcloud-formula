@@ -1,0 +1,29 @@
+tool:
+  users:
+    user:
+      nextcloud:
+        # these are configuration options in nextcloud.cfg. Section: {option: value}
+        config:
+          General:
+            optionalServerNotifications: true
+        # you can specify adding accounts as well. if password[_pillar] is set, salt
+        # will try to authenticate them automatically and save to the system keyring
+        # currently only supported on MacOS
+        accounts:
+          - name: nextcloud-user
+            url: https://cloud.test.com
+            password: super_nextcloud-password!  # better use password_pillar instead
+            password_pillar: 'tool:users:user:nextcloud:password' # avoids disk writes (state cache)
+  nextcloud:
+    users:
+      user:                             # user configuration can also be specified in tool:nextcloud:users
+        nextcloud:
+          config:
+            General:
+              optionalServerNotifications: false
+    defaults:                           # default formula configuration for all users
+      accounts:
+        - name: nextcloud-common-user
+          url: https://cloud.test.com
+          password: mediocre_nextcloud-password...
+          password_pillar: 'tool:nextcloud:password'
