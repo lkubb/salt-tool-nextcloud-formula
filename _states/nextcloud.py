@@ -258,7 +258,7 @@ def account_deauthenticated(name, url=None, app_password=None, keyring=None, pro
     return ret
 
 
-def options(options, sync=False, sync_accounts=False, user=None):
+def options(options, sync=False, sync_accounts=False, user=None, name=None):
     """
     Make sure the local user's Nextcloud Desktop client configuration options
     are set as specified.
@@ -277,8 +277,11 @@ def options(options, sync=False, sync_accounts=False, user=None):
     user
         The local user to ensure the account presence for. Defaults to salt user.
 
+    name
+        exists for technical reasons since salt expects a state to accept it
+
     """
-    ret = {"name": '', "result": True, "comment": "", "changes": {}}
+    ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     # activating account sync syncs the rest as well
     sync = sync or sync_accounts
