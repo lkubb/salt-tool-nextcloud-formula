@@ -560,13 +560,17 @@ def _macos_has_authentication(name, url, keychain=None, user=None):
         keychain = __salt__['user.info'](user)['home'] + '/Library/Keychains/login.keychain-db'
 
     _, num = _get_account(name, url, user)
+
+    ret_sum = 0
     for s in [name, name + '_app-password']:
         ret = __salt__['cmd.retcode'](
             "/usr/bin/security find-generic-password -a '{}:{}/:{}' -s 'Nextcloud' '{}'".format(
                 s, url, num, keychain))
-        if ret:
-            return False
-    return True
+        ret_sum += ret
+
+    # since there are two possible names, but both are written by nextcloud
+    # (not sure if both are necessary), only return success if both are found
+    return ret_sum == 0
 
 
 def _macos_save_authentication(name, app_password, url, keychain=None, user=None):
