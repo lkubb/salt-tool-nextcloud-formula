@@ -372,7 +372,9 @@ def get_app_password(name, url, keyring=None, user=None):
 
     """
     if salt.utils.platform.is_darwin():
-        if not (app_password := _macos_get_authentication(name, url, keyring, user)):
+        app_password = _macos_get_authentication(name, url, keyring, user)
+        # if not (app_password := _macos_get_authentication(name, url, keyring, user)):
+        if not app_password:
             raise CommandExecutionError("Could not retrieve application password for {} on {} for user {}.".format(name, url, user))
 
     if app_password:
@@ -547,7 +549,10 @@ def _deauthenticate_request(name, url, app_password, user=None):
 
     data = ElementTree.fromstring(response.content)
 
-    if '200' == (statuscode := data.findall('.//statuscode')[0].text):
+    statuscode = data.findall('.//statuscode')[0].text
+
+    # if '200' == (statuscode := data.findall('.//statuscode')[0].text):
+    if '200' == statuscode:
         return True
     # assumption: app password was not found, therefore it was already absent
     elif '404' == statuscode:

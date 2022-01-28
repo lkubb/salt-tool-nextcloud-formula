@@ -155,13 +155,16 @@ def account_authenticated(name, url=None, password=None, password_pillar=None, k
             ret["comment"] = "Account '{}' on '{}' would have been authenticated for user '{}'.".format(name, url, user)
             ret["changes"] = {'authenticated': name}
         # try to acquire an application password
-        elif (app_password := __salt__["nextcloud.authenticate"](name, url, password, password_pillar, user)):
-            ret["comment"] = "Account '{}' on '{}' was authenticated for user '{}'.".format(name, url, user)
-            ret["changes"] = {'authenticated': name}
+        # elif (app_password := __salt__["nextcloud.authenticate"](name, url, password, password_pillar, user)):
         else:
-            ret["result"] = False
-            ret["comment"] = "Something went wrong while calling nextcloud."
-            return ret
+            app_password = __salt__["nextcloud.authenticate"](name, url, password, password_pillar, user)
+            if app_password:
+                ret["comment"] = "Account '{}' on '{}' was authenticated for user '{}'.".format(name, url, user)
+                ret["changes"] = {'authenticated': name}
+            else:
+                ret["result"] = False
+                ret["comment"] = "Something went wrong while calling nextcloud."
+                return ret
         # assume the password can be saved into the keyring because actually
         # testing without external consequences is too cumbersome
         if __opts__["test"]:
