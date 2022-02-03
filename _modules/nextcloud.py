@@ -694,6 +694,8 @@ def _get_parsed_cfg(user=None):
     c.optionxform = str
     if __salt__['file.file_exists'](cfg):
         c.read(cfg)
+    if not c.has_section('Accounts'):
+        c.add_section('Accounts')
     return c
 
 
