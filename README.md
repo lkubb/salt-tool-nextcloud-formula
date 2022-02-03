@@ -88,3 +88,14 @@ tool:
 
 ## Todo
 - default url in map.jinja
+- folder sync setup:
+
+  ```
+  0\Folders\1\ignoreHiddenFiles=false
+  0\Folders\1\journalPath=.sync_<12hashchars>.db
+  0\Folders\1\localPath=/Users/user/Nextcloud/
+  0\Folders\1\paused=false
+  0\Folders\1\targetPath=/
+  0\Folders\1\version=2
+  0\Folders\1\virtualFilesMode=off
+  ```
