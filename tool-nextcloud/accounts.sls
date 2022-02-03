@@ -11,6 +11,8 @@ Nextcloud user account '{{ account.name }}' is present in {{ user.name }}'s conf
     - url: {{ account.url }}
     - authtype: {{ account.get('authtype', 'webflow') }}
     - user: {{ user.name }}
+    - require:
+      - sls: {{ slsdotpath }}.package
 
     {%- if 'Darwin' == grains['kernel'] and (account.get('password') or account.get('password_pillar')) %}
 Nextcloud user account '{{ account.name }}' is authenticated for {{ user.name }}:
