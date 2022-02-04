@@ -665,7 +665,7 @@ def _serialize_account(name, url, authtype='webflow', user=None):
     # user=@Invalid() seems to be important, without it, no account name
     # is shown and nextcloud does not recognize the credentials in the keychain
     account = {
-        'authtype': authtype,
+        'authType': authtype,
         'dav_user': name,
         'url': url,
         'user': '@Invalid()'

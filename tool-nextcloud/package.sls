@@ -6,10 +6,13 @@ Nextcloud Desktop is installed:
 
 {%- for user in nextcloud.users %}
 
-Nextcloud config folder exists for user '{{ user.name }}':
-  file.directory:
-    - name: {{ user._nextcloud.confdir }}
+Nextcloud config file exists for user '{{ user.name }}':
+  file.managed:
+    - name: {{ user._nextcloud.confdir }}/nextcloud.cfg
     - user: {{ user.name }}
     - group: {{ user.group }}
-    - mode: '0700'
+    - replace: false
+    - mode: '0600'
+    - dir_mode: '0700'
+    - makedirs: true
 {%- endfor %}
