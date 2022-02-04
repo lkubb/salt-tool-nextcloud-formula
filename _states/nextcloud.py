@@ -336,7 +336,7 @@ def _compare_options(options, sync, sync_accounts, user):
     cumulative = []
 
     # tell dictdiffer to include newly missing keys if sync is requested
-    diff = salt.utils.dictdiffer.recursive_diff(current, options, ignore_missing_keys=not sync)
+    diff = PatchedRecursiveDiffer(current, options, ignore_missing_keys=not sync)
     changed = diff.changed()
     added = diff.added()
     removed = diff.removed()
@@ -354,3 +354,57 @@ def _compare_options(options, sync, sync_accounts, user):
     changes['changed'] = changed
     changes['removed'] = removed
     return bool(cumulative), changes
+
+
+class PatchedRecursiveDiffer(salt.utils.dictdiffer.RecursiveDictDiffer):
+    def added(self):
+        """
+        Returns all keys that have been added.
+
+        If the keys are in child dictionaries they will be represented with
+        . notation
+
+        This works for added nested dicts as well, where the parent class
+        tries to access keys on non-dictionary values. @TODO pull request
+
+        fixes stuff like ``TypeError: 'bool' object is not subscriptable``
+        """
+
+        def _added(diffs, prefix):
+            keys = []
+            for key in diffs.keys():
+                if isinstance(diffs[key], dict):
+                    if "old" not in diffs[key]:
+                        keys.extend(_added(diffs[key], prefix="{}{}.".format(prefix, key)))
+                    elif diffs[key]["old"] == self.NONE_VALUE:
+                        keys.append("{}{}".format(prefix, key))
+            return keys
+
+        return sorted(_added(self._diffs, prefix=""))
+
+    def removed(self):
+        """
+        Returns all keys that have been removed.
+
+        If the keys are in child dictionaries they will be represented with
+        . notation
+
+        This works for removed nested dicts as well, where the parent class
+        tries to access keys on non-dictionary values. @TODO pull request
+
+        fixes stuff like ``TypeError: 'bool' object is not subscriptable``
+        """
+
+        def _removed(diffs, prefix):
+            keys = []
+            for key in diffs.keys():
+                if isinstance(diffs[key], dict):
+                    if "old" not in diffs[key]:
+                        keys.extend(
+                            _removed(diffs[key], prefix="{}{}.".format(prefix, key))
+                        )
+                    elif diffs[key]["new"] == self.NONE_VALUE:
+                        keys.append("{}{}".format(prefix, key))
+            return keys
+
+        return sorted(_removed(self._diffs, prefix=""))
