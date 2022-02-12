@@ -60,7 +60,7 @@ user:
     # these are configuration options in nextcloud.cfg. Section: {option: value}
     config:
       General:
-        optionalServerNotifications: true
+        optionalServerNotifications: 'true' # booleans need to be lowercase strings!
     # you can specify adding accounts as well. if password[_pillar] is set, salt
     # will try to authenticate them automatically and save to the system keyring
     # currently only supported on MacOS
@@ -78,7 +78,7 @@ tool:
     defaults:                           # default formula configuration for all users
       config:
         General:
-          optionalServerNotifications: false
+          optionalServerNotifications: 'false'
       accounts:                         # accounts are currently not merged with default ones
         - name: nextcloud-common-user
           url: https://cloud.test.com

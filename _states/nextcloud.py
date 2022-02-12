@@ -7,13 +7,13 @@ and general options in nextcloud.cfg.
 
 """
 
-# import logging
+import logging
 import salt.exceptions
 import salt.utils.dictdiffer
 
 # import salt.utils.platform
 
-# log = logging.getLogger(__name__)
+log = logging.getLogger(__name__)
 
 __virtualname__ = "nextcloud"
 
@@ -332,6 +332,8 @@ def options(options, sync=False, sync_accounts=False, user=None, name=None):
 
 def _compare_options(options, sync, sync_accounts, user):
     current = __salt__["nextcloud.get_options"](user)
+    log.debug("Current options:\n\n{}".format(current))
+    log.debug("Requested options:\n\n{}".format(options))
     changes = {}
     cumulative = []
 
