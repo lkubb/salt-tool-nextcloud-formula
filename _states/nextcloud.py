@@ -359,54 +359,86 @@ def _compare_options(options, sync, sync_accounts, user):
 
 
 class PatchedRecursiveDiffer(salt.utils.dictdiffer.RecursiveDictDiffer):
-    def added(self):
+    def added(self, include_nested=False):
         """
         Returns all keys that have been added.
 
+        include_nested
+            If an added key contains a dictionary, include its
+            keys in dot notation as well. Defaults to false.
+
         If the keys are in child dictionaries they will be represented with
-        . notation
+        . notation.
 
         This works for added nested dicts as well, where the parent class
-        tries to access keys on non-dictionary values. @TODO pull request
-
-        fixes stuff like ``TypeError: 'bool' object is not subscriptable``
+        tries to access keys on non-dictionary values and throws an exception.
         """
+        return sorted(self._it("old", "new", include_nested))
 
-        def _added(diffs, prefix):
-            keys = []
-            for key in diffs.keys():
-                if isinstance(diffs[key], dict):
-                    if "old" not in diffs[key]:
-                        keys.extend(_added(diffs[key], prefix="{}{}.".format(prefix, key)))
-                    elif diffs[key]["old"] == self.NONE_VALUE:
-                        keys.append("{}{}".format(prefix, key))
-            return keys
-
-        return sorted(_added(self._diffs, prefix=""))
-
-    def removed(self):
+    def removed(self, include_nested=False):
         """
         Returns all keys that have been removed.
+
+        include_nested
+            If an added key contains a dictionary, include its
+            keys in dot notation as well. Defaults to false.
 
         If the keys are in child dictionaries they will be represented with
         . notation
 
         This works for removed nested dicts as well, where the parent class
-        tries to access keys on non-dictionary values. @TODO pull request
-
-        fixes stuff like ``TypeError: 'bool' object is not subscriptable``
+        tries to access keys on non-dictionary values and throws an exception.
         """
+        return sorted(self._it("new", "old", include_nested))
 
-        def _removed(diffs, prefix):
-            keys = []
-            for key in diffs.keys():
-                if isinstance(diffs[key], dict):
-                    if "old" not in diffs[key]:
-                        keys.extend(
-                            _removed(diffs[key], prefix="{}{}.".format(prefix, key))
+    def _it(
+        self, key_a, key_b, include_nested=False, diffs=None, prefix="", is_nested=False
+    ):
+        keys = []
+        if diffs is None:
+            diffs = self.diffs
+
+        for key in diffs.keys():
+            if is_nested:
+                keys.append("{}{}".format(prefix, key))
+
+            if not isinstance(diffs[key], dict):
+                continue
+
+            if is_nested:
+                keys.extend(
+                    self._it(
+                        key_a,
+                        key_b,
+                        diffs=diffs[key],
+                        prefix="{}{}.".format(prefix, key),
+                        is_nested=is_nested,
+                        include_nested=include_nested,
+                    )
+                )
+            elif "old" not in diffs[key]:
+                keys.extend(
+                    self._it(
+                        key_a,
+                        key_b,
+                        diffs=diffs[key],
+                        prefix="{}{}.".format(prefix, key),
+                        is_nested=is_nested,
+                        include_nested=include_nested,
+                    )
+                )
+            elif diffs[key][key_a] == self.NONE_VALUE:
+                keys.append("{}{}".format(prefix, key))
+
+                if isinstance(diffs[key][key_b], dict) and include_nested:
+                    keys.extend(
+                        self._it(
+                            key_a,
+                            key_b,
+                            diffs=diffs[key][key_b],
+                            is_nested=True,
+                            prefix="{}{}.".format(prefix, key),
+                            include_nested=include_nested,
                         )
-                    elif diffs[key]["new"] == self.NONE_VALUE:
-                        keys.append("{}{}".format(prefix, key))
-            return keys
-
-        return sorted(_removed(self._diffs, prefix=""))
+                    )
+        return keys
