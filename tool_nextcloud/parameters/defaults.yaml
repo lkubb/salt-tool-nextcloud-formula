@@ -1,0 +1,19 @@
+# -*- coding: utf-8 -*-
+# vim: ft=yaml
+#
+# Set default values.
+---
+values:
+  lookup:
+    pkg:
+      name: nextcloud
+    paths:
+      confdir: '.config/nextcloud'
+      conffile: 'nextcloud.cfg'
+      xdg_dirname: 'nextcloud'
+      xdg_conffile: 'nextcloud.cfg'
+    rootgroup: root
+  # Just here for testing
+  added_in_defaults: defaults_value
+  winner: defaults
+...

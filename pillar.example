@@ -1,29 +1,123 @@
-tool:
+# -*- coding: utf-8 -*-
+# vim: ft=yaml
+# yamllint disable rule:comments-indentation
+---
+######################################################################
+# Mind that this is to be read as an overview of available
+# settings which can be set in many different ways, not only
+# by providing pillar values.
+# The different sources will be merged. For further information,
+# please see the docs, `libmapstack.jinja` as well as the configured
+# default sources in `parameters/map_jinja.yaml`.
+#
+# This documentation will need to be updated once there is
+# some learned experience. @TODO
+######################################################################
+
+# Apart from the various source files, there are two independent source trees
+# for user-specific configuration.
+# Generally tool_nextcloud > tool_global.
+# `tool_global` focuses on specific users, of which most values
+# will be respected by all formulae in the `tool` suite:
+tool_global:
   users:
+
+      # The following is global configuration for the user named `user`.
     user:
+
+        # Force the usage of XDG directories for this user.
+      xdg: true
+
+        # Persist environment variables used by this formula for this
+        # user to this file (will be appended to a file relative to $HOME)
+      persistenv: '.config/zsh/zshenv'
+
+        # Add runcom hooks specific to this formula to this file
+        # for this user (will be appended to a file relative to $HOME)
+      rchook: '.config/zsh/zshrc'
+
+        # This user's configuration for this formula. Will be overridden by
+        # user-specific configuration in `tool_nextcloud:users`.
+        # Set this to `false` to disable configuration for this user.
       nextcloud:
-        # these are configuration options in nextcloud.cfg. Section: {option: value}
+          # You can specify accounts as well. If password[_pillar] is set, Salt
+          # will try to authenticate them automatically and save to the system keyring.
+          # Currently only supported on MacOS.
+        accounts:
+          - name: nextcloud-common-user
+              # better use password_pillar instead
+            password: mediocre_nextcloud-password...
+              # avoids disk writes (state cache)
+            password_pillar: tool:nextcloud:password
+            url: https://cloud.test.com
+          # These are configuration options in nextcloud.cfg. `Section: {option: value}`
         config:
           General:
-            optionalServerNotifications: 'true' # booleans need to be lowercase strings!
-        # you can specify adding accounts as well. if password[_pillar] is set, salt
-        # will try to authenticate them automatically and save to the system keyring
-        # currently only supported on MacOS
-        accounts:
-          - name: nextcloud-user
-            url: https://cloud.test.com
-            password: super_nextcloud-password!  # better use password_pillar instead
-            password_pillar: 'tool:users:user:nextcloud:password' # avoids disk writes (state cache)
-  nextcloud:
-    users:
-      user:                             # user configuration can also be specified in tool:nextcloud:users
-        nextcloud:
-          config:
-            General:
-              optionalServerNotifications: 'false'
-    defaults:                           # default formula configuration for all users
-      accounts:
-        - name: nextcloud-common-user
-          url: https://cloud.test.com
-          password: mediocre_nextcloud-password...
-          password_pillar: 'tool:nextcloud:password'
+              # Booleans need to be lowercase strings!
+            optionalServerNotifications: 'false'
+          # Delete all other options not specified in config for this user.
+        sync_config: false
+
+tool_nextcloud:
+
+    # Default formula configuration for all users.
+  defaults:
+    config: default value for all users
+
+    # User configuration can also be specified here in
+    # `tool_nextcloud:users`. It will override
+    # configuration sourced from `tool_global:users`.
+  users:
+    user:
+      persistenv: '.bash_profile'
+      nextcloud:
+        config: this overrides config from tool_globl:users
+
+######################################################################
+# The following settings define default values for this formula,
+# depending on different grains. You should not have to modify them
+# in most cases. For a full overview, see the different files
+# in `parameters`.
+######################################################################
+  lookup:
+    pkg:
+      name: nextcloud
+    rootgroup: root
+    paths:
+      confdir: '.config/nextcloud'
+      conffile: 'nextcloud.cfg'
+
+######################################################################
+# This is where `tool` suite settings end and Salt behavior settings
+# inherited from `salt-formulas/template-formula` start. They will
+# influence how exactly the TOFS pattern is applied. Mind that
+# parts of this are disabled for `configsync.sls`.
+######################################################################
+  tofs:
+    # The files_switch key serves as a selector for alternative
+    # directories under the formula files directory. See TOFS pattern
+    # doc for more info.
+    # Note: Any value not evaluated by `config.get` will be used literally.
+    # This can be used to set custom paths, as many levels deep as required.
+    files_switch:
+      - any/path/can/be/used/here
+      - id
+      - roles
+      - osfinger
+      - os
+      - os_family
+
+    # All aspects of path/file resolution are customisable using the options below.
+    # This is unnecessary in most cases; there are sensible defaults.
+    # Default path: salt://< path_prefix >/< dirs.files >/< dirs.default >
+    # I.e.: salt://tool_nextcloud/files/default
+    # path_prefix: template_alt
+    # dirs:
+    #   files: files_alt
+    #   default: default_alt
+    # The entries under `source_files` are prepended to the default source files
+    # given for the state
+    source_files:
+      Nextcloud Desktop config file is managed for user 'user':
+        - 'nextcloud.cfg'
+        - 'nextcloud.cfg.jinja'

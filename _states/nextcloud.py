@@ -1,13 +1,13 @@
 """
-Nextcloud Desktop Salt State
+Nextcloud Desktop salt state module
+===================================
+
 Manage Nextcloud Desktop user accounts, their authentication
 and general options in nextcloud.cfg.
-
-======================================================
-
 """
 
 import logging
+
 import salt.exceptions
 import salt.utils.dictdiffer
 
@@ -22,7 +22,7 @@ def __virtual__():
     return __virtualname__
 
 
-def account_present(name, url, authtype='webflow', user=None):
+def account_present(name, url, authtype="webflow", user=None):
     """
     Make sure an account is present in the local user's Nextcloud Desktop client config.
 
@@ -45,13 +45,19 @@ def account_present(name, url, authtype='webflow', user=None):
     try:
         if __salt__["nextcloud.account_exists"](name, url, user):
             ret["comment"] = "Account is already present."
-        elif __opts__['test']:
+        elif __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Account '{}' on '{}' would have been added for user '{}'.".format(name, url, user)
-            ret["changes"] = {'added': name}
+            ret[
+                "comment"
+            ] = "Account '{}' on '{}' would have been added for user '{}'.".format(
+                name, url, user
+            )
+            ret["changes"] = {"added": name}
         elif __salt__["nextcloud.add_account"](name, url, authtype, user):
-            ret["comment"] = "Account '{}' on '{}' was added for user '{}'.".format(name, url, user)
-            ret["changes"] = {'added': name}
+            ret["comment"] = "Account '{}' on '{}' was added for user '{}'.".format(
+                name, url, user
+            )
+            ret["changes"] = {"added": name}
         else:
             ret["result"] = False
             ret["comment"] = "Something went wrong while calling nextcloud."
@@ -85,13 +91,19 @@ def account_absent(name, url=None, user=None):
     try:
         if not __salt__["nextcloud.account_exists"](name, url, user):
             ret["comment"] = "Account is already absent."
-        elif __opts__['test']:
+        elif __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Account '{}' on '{}' would have been removed for user '{}'.".format(name, url, user)
-            ret["changes"] = {'removed': name}
+            ret[
+                "comment"
+            ] = "Account '{}' on '{}' would have been removed for user '{}'.".format(
+                name, url, user
+            )
+            ret["changes"] = {"removed": name}
         elif __salt__["nextcloud.remove_account"](name, url, user):
-            ret["comment"] = "Account '{}' on '{}' was removed for user '{}'.".format(name, url, user)
-            ret["changes"] = {'removed': name}
+            ret["comment"] = "Account '{}' on '{}' was removed for user '{}'.".format(
+                name, url, user
+            )
+            ret["changes"] = {"removed": name}
         else:
             ret["result"] = False
             ret["comment"] = "Something went wrong while calling nextcloud."
@@ -102,7 +114,9 @@ def account_absent(name, url=None, user=None):
     return ret
 
 
-def account_authenticated(name, url=None, password=None, password_pillar=None, keyring=None, user=None):
+def account_authenticated(
+    name, url=None, password=None, password_pillar=None, keyring=None, user=None
+):
     """
     Make sure an account present in the local user's Nextcloud Desktop client config
     is authenticated persistently using the system's default keyring. This currently
@@ -134,33 +148,55 @@ def account_authenticated(name, url=None, password=None, password_pillar=None, k
     ret = {"name": name, "result": True, "comment": "", "changes": {}}
 
     try:
-        has_app_password = __salt__["nextcloud.has_app_password"](name, url, keyring, user)
+        has_app_password = __salt__["nextcloud.has_app_password"](
+            name, url, keyring, user
+        )
         # for authentication, require the account be present in the config file
         if not __salt__["nextcloud.account_exists"](name, url, user):
             ret["result"] = False
-            ret["comment"] = "Account {} on {} is not present in nextcloud.cfg for user {}. Make sure to call nextcloud.account_present first.".format(name, url, user)
+            ret[
+                "comment"
+            ] = "Account {} on {} is not present in nextcloud.cfg for user {}. Make sure to call nextcloud.account_present first.".format(
+                name, url, user
+            )
             if has_app_password:
-                ret["comment"] += " It seems there is a keyring entry though. Delete it to avoid bugs."
+                ret[
+                    "comment"
+                ] += " It seems there is a keyring entry though. Delete it to avoid bugs."
             if __opts__["test"]:
                 ret["result"] = None
                 ret["comment"] += " Since this is a test run, this might be expected."
         if has_app_password:
-            ret["comment"] = "Account {} on {} seems to be authenticated for user {}. If not, delete the keyring entry and try again.".format(name, url, user)
+            ret[
+                "comment"
+            ] = "Account {} on {} seems to be authenticated for user {}. If not, delete the keyring entry and try again.".format(
+                name, url, user
+            )
             return ret
             # @TODO supply force flag to renew auth
 
         # checking authentication does not work without external consequences, assume it works
         elif __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Account '{}' on '{}' would have been authenticated for user '{}'.".format(name, url, user)
-            ret["changes"] = {'authenticated': name}
+            ret[
+                "comment"
+            ] = "Account '{}' on '{}' would have been authenticated for user '{}'.".format(
+                name, url, user
+            )
+            ret["changes"] = {"authenticated": name}
         # try to acquire an application password
         # elif (app_password := __salt__["nextcloud.authenticate"](name, url, password, password_pillar, user)):
         else:
-            app_password = __salt__["nextcloud.authenticate"](name, url, password, password_pillar, user)
+            app_password = __salt__["nextcloud.authenticate"](
+                name, url, password, password_pillar, user
+            )
             if app_password:
-                ret["comment"] = "Account '{}' on '{}' was authenticated for user '{}'.".format(name, url, user)
-                ret["changes"] = {'authenticated': name}
+                ret[
+                    "comment"
+                ] = "Account '{}' on '{}' was authenticated for user '{}'.".format(
+                    name, url, user
+                )
+                ret["changes"] = {"authenticated": name}
             else:
                 ret["result"] = False
                 ret["comment"] = "Something went wrong while calling nextcloud."
@@ -168,14 +204,22 @@ def account_authenticated(name, url=None, password=None, password_pillar=None, k
         # assume the password can be saved into the keyring because actually
         # testing without external consequences is too cumbersome
         if __opts__["test"]:
-            ret["comment"] += " The application password would have been persisted in the system keychain."
+            ret[
+                "comment"
+            ] += " The application password would have been persisted in the system keychain."
         # persist the application password
-        elif app_password and __salt__["nextcloud.save_app_password"](name, url, app_password, keyring, user):
+        elif app_password and __salt__["nextcloud.save_app_password"](
+            name, url, app_password, keyring, user
+        ):
             ret["result"] = True
-            ret["comment"] += " The application password has been persisted in the system keychain"
+            ret[
+                "comment"
+            ] += " The application password has been persisted in the system keychain"
         else:
             ret["result"] = False
-            ret["comment"] += " Something went wrong while trying to persist the authentication though."
+            ret[
+                "comment"
+            ] += " Something went wrong while trying to persist the authentication though."
     except salt.exceptions.CommandExecutionError as e:
         ret["result"] = False
         ret["comment"] = str(e)
@@ -183,7 +227,9 @@ def account_authenticated(name, url=None, password=None, password_pillar=None, k
     return ret
 
 
-def account_deauthenticated(name, url=None, app_password=None, keyring=None, prompt=True, user=None):
+def account_deauthenticated(
+    name, url=None, app_password=None, keyring=None, prompt=True, user=None
+):
     """
     Make sure an account is deauthenticated persistently, ie the server session
     is closed and/or the password is absent from the system's default keyring.
@@ -228,25 +274,47 @@ def account_deauthenticated(name, url=None, app_password=None, keyring=None, pro
         # discovery is done in the execution module @FIXME
         if not url and not __salt__["nextcloud.account_exists"](name, user=user):
             ret["result"] = False
-            ret["comment"] = "Account {} is not present in nextcloud.cfg for user {}. Make sure to call nextcloud.account_present first or specify url.".format(name, user)
+            ret[
+                "comment"
+            ] = "Account {} is not present in nextcloud.cfg for user {}. Make sure to call nextcloud.account_present first or specify url.".format(
+                name, user
+            )
             return ret
 
-        has_app_password = __salt__["nextcloud.has_app_password"](name, url, keyring, user)
+        has_app_password = __salt__["nextcloud.has_app_password"](
+            name, url, keyring, user
+        )
 
         if prompt and app_password is None:
             if not has_app_password:
                 ret["result"] = False
-                ret["comment"] = "Could not autodiscover application password for account {} on {} for user {}. Set prompt=False to skip.".format(name, url, user)
+                ret[
+                    "comment"
+                ] = "Could not autodiscover application password for account {} on {} for user {}. Set prompt=False to skip.".format(
+                    name, url, user
+                )
                 return ret
-            app_password = __salt__["nextcloud.get_app_password"](name, url, keyring, user)
+            app_password = __salt__["nextcloud.get_app_password"](
+                name, url, keyring, user
+            )
 
         if app_password:
             if __opts__["test"]:
                 ret["result"] = None
-                ret["comment"] = "Would have tried to deauthenticate account {} from the server at {} for user {}.".format(name, url, user)
+                ret[
+                    "comment"
+                ] = "Would have tried to deauthenticate account {} from the server at {} for user {}.".format(
+                    name, url, user
+                )
                 ret["changes"]["session_closed"] = name
-            elif __salt__["nextcloud.deauthenticate"](name, url, app_password, keyring, prompt, user):
-                ret["comment"] = "Deauthenticated account {} from the server at {} for user {}.".format(name, url, user)
+            elif __salt__["nextcloud.deauthenticate"](
+                name, url, app_password, keyring, prompt, user
+            ):
+                ret[
+                    "comment"
+                ] = "Deauthenticated account {} from the server at {} for user {}.".format(
+                    name, url, user
+                )
                 ret["changes"]["session_closed"] = name
             else:
                 ret["result"] = False
@@ -255,10 +323,18 @@ def account_deauthenticated(name, url=None, app_password=None, keyring=None, pro
 
         if has_app_password:
             if __opts__["test"]:
-                ret["comment"] += " Would have deleted application password from keyring for account {} on server {} for user {}".format(name, url, user)
+                ret[
+                    "comment"
+                ] += " Would have deleted application password from keyring for account {} on server {} for user {}".format(
+                    name, url, user
+                )
                 ret["changes"]["deleted"] = name
             elif __salt__["nextcloud.remove_app_password"](name, url, keyring, user):
-                ret["comment"] = " Deleted application password from keyring for account {} on server {} for user {}.".format(name, url, user)
+                ret[
+                    "comment"
+                ] = " Deleted application password from keyring for account {} on server {} for user {}.".format(
+                    name, url, user
+                )
                 ret["changes"]["deleted"] = name
                 ret["result"] = True
             else:
@@ -304,11 +380,15 @@ def options(options, sync=False, sync_accounts=False, user=None, name=None):
         changed, changes = _compare_options(options, sync, sync_accounts, user)
 
         if not changed:
-            ret["comment"] = "Options are already set as specified for user {}.".format(user)
+            ret["comment"] = "Options are already set as specified for user {}.".format(
+                user
+            )
 
         elif __opts__["test"]:
             ret["result"] = None
-            ret["comment"] = "Options would have been {} for user '{}'.".format('synced' if sync else 'updated', user)
+            ret["comment"] = "Options would have been {} for user '{}'.".format(
+                "synced" if sync else "updated", user
+            )
             ret["changes"] = changes
 
         elif sync and __salt__["nextcloud.set_options"](options, sync_accounts, user):
@@ -352,9 +432,9 @@ def _compare_options(options, sync, sync_accounts, user):
     if sync:
         cumulative += removed
 
-    changes['added'] = added
-    changes['changed'] = changed
-    changes['removed'] = removed
+    changes["added"] = added
+    changes["changed"] = changed
+    changes["removed"] = removed
     return bool(cumulative), changes
 
 
