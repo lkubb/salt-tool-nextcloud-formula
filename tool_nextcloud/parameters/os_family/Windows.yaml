@@ -15,5 +15,6 @@ values:
   lookup:
     paths:
       confdir: 'AppData\Roaming\Nextcloud'
-    pkg_manager: chocolatey
+    pkg:
+      manager: chocolatey
 ...

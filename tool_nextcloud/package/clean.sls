@@ -9,6 +9,7 @@
 include:
   - {{ sls_config_clean }}
 
+
 Nextcloud Desktop is removed:
   pkg.removed:
     - name: {{ nextcloud.lookup.pkg.name }}

@@ -1,7 +1,7 @@
 .. _sm_nextcloud:
 
-nextcloud state module
-======================
+``nextcloud`` state module
+==========================
 
 .. automodule:: _states.nextcloud
    :members:
