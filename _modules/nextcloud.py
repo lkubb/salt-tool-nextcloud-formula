@@ -26,7 +26,7 @@ def __virtual__():
     ):
         return __virtualname__
 
-    raise CommandExecutionError("Platform not supported.")
+    return False
 
 
 def _where(user=None):
