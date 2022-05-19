@@ -634,7 +634,8 @@ def _macos_has_authentication(name, url, keychain=None, user=None):
         ret = __salt__["cmd.retcode"](
             "/usr/bin/security find-generic-password -a '{}:{}/:{}' -s 'Nextcloud' '{}'".format(
                 s, url, num, keychain
-            )
+            ),
+            ignore_retcode=True,
         )
         ret_sum += ret
 
