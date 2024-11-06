@@ -1,13 +1,16 @@
-# -*- coding: utf-8 -*-
 # vim: ft=sls
 
-{%- set tplroot = tpldir.split('/')[0] %}
+{#-
+    Removes the configuration of the Nextcloud Desktop package.
+#}
+
+{%- set tplroot = tpldir.split("/")[0] %}
 {%- from tplroot ~ "/map.jinja" import mapdata as nextcloud with context %}
 
 
-{%- for user in nextcloud.users | selectattr('nextcloud.config', 'defined') | selectattr('nextcloud.config') %}
+{%- for user in nextcloud.users | selectattr("nextcloud.config", "defined") | selectattr("nextcloud.config") %}
 
 Nextcloud Desktop config file is cleaned for user '{{ user.name }}':
   file.absent:
-    - name: {{ user['_nextcloud'].conffile }}
+    - name: {{ user["_nextcloud"].conffile }}
 {%- endfor %}

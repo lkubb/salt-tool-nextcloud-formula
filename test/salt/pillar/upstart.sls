@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 # vim: ft=yaml
 ---
 tool_global:
@@ -31,6 +30,9 @@ tool_nextcloud:
     paths:
       confdir: '.config/nextcloud'
       conffile: 'nextcloud.cfg'
+      xdg_dirname: 'nextcloud'
+      xdg_conffile: 'nextcloud.cfg'
+    rootgroup: root
 
   tofs:
     # The files_switch key serves as a selector for alternative

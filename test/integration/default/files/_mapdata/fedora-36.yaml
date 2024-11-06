@@ -32,6 +32,8 @@ values:
     paths:
       confdir: '.config/nextcloud'
       conffile: 'nextcloud.cfg'
+      xdg_dirname: 'nextcloud'
+      xdg_conffile: 'nextcloud.cfg'
     rootgroup: root
   map_jinja:
     sources:

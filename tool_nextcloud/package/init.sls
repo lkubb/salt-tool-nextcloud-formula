@@ -1,5 +1,8 @@
-# -*- coding: utf-8 -*-
 # vim: ft=sls
+
+{#-
+    Installs the Nextcloud Desktop package only.
+#}
 
 include:
   - .install

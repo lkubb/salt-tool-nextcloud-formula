@@ -1,11 +1,10 @@
-# -*- coding: utf-8 -*-
 # vim: ft=sls
 
-{%- set tplroot = tpldir.split('/')[0] %}
+{%- set tplroot = tpldir.split("/")[0] %}
 {%- from tplroot ~ "/map.jinja" import mapdata as nextcloud with context %}
 
 
-{%- for user in nextcloud.users | selectattr('nextcloud.accounts', 'defined') | selectattr('nextcloud.accounts') %}
+{%- for user in nextcloud.users | selectattr("nextcloud.accounts", "defined") | selectattr("nextcloud.accounts") %}
 
 {%-   for account in user.nextcloud.accounts %}
 Nextcloud user account '{{ account.name }}' is absent from {{ user.name }}'s config:
@@ -14,7 +13,7 @@ Nextcloud user account '{{ account.name }}' is absent from {{ user.name }}'s con
     - url: {{ account.url }}
     - user: {{ user.name }}
 
-{%-     if 'Darwin' == grains['kernel'] and (account.get('password') or account.get('password_pillar')) %}
+{%-     if grains.kernel == "Darwin" and (account.get("password") or account.get("password_pillar")) %}
 
 Nextcloud user account '{{ account.name }}' is authenticated for {{ user.name }}:
   nextcloud.account_deauthenticated:
