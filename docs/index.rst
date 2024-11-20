@@ -1,5 +1,5 @@
-Welcome to salt-tool-nextcloud-formula's documentation!
-=======================================================
+Welcome to tool-nextcloud-formula's documentation!
+==================================================
 
 .. toctree::
    :maxdepth: 2
